@@ -14,6 +14,7 @@ from email import encoders
 from io import BytesIO
 
 # --- KONFIGURATION ---
+# Wir rufen die Variablen ab und prüfen direkt, ob sie existieren
 EPO_KEY = os.getenv("EPO_CONSUMER_KEY")
 EPO_SECRET = os.getenv("EPO_CONSUMER_SECRET")
 EMAIL_SENDER = os.getenv("EMAIL_SENDER")
@@ -29,8 +30,15 @@ def get_last_wednesday():
 
 def get_token():
     url = "https://ops.epo.org/3.2/auth/accesstoken"
-    if not EPO_KEY or not EPO_SECRET:
-        print("FEHLER: EPO_CONSUMER_KEY oder SECRET fehlt in den GitHub Secrets.")
+    
+    # Detaillierte Prüfung der Secrets
+    missing_secrets = []
+    if not EPO_KEY: missing_secrets.append("EPO_CONSUMER_KEY")
+    if not EPO_SECRET: missing_secrets.append("EPO_CONSUMER_SECRET")
+    
+    if missing_secrets:
+        print(f"FEHLER: Folgende Secrets fehlen in der Umgebung: {', '.join(missing_secrets)}")
+        print("Hinweis: Prüfe deine GitHub Repository Settings -> Secrets -> Actions.")
         return None
     
     auth_string = f"{EPO_KEY}:{EPO_SECRET}"
@@ -44,7 +52,6 @@ def get_token():
         print("Sende Token-Anfrage an EPO...")
         res = requests.post(url, headers=headers, data={"grant_type": "client_credentials"}, timeout=20)
         
-        # Sicherstellen, dass wir JSON erhalten
         if res.status_code == 200:
             try:
                 token_data = res.json()
@@ -61,7 +68,6 @@ def get_token():
         return None
 
 def fetch_data(token, date_str):
-    # Query: pd = Publication Date, ic = IPC Class
     query = f"pd={date_str} and ic=B23"
     url = "https://ops.epo.org/3.2/rest-services/published-data/search/biblio"
     headers = {
@@ -88,7 +94,6 @@ def parse_xml(xml_data):
     try:
         root = ET.fromstring(xml_data)
         results = []
-        # Suche nach den bibliographischen Daten der Treffer
         for biblio in root.findall(".//exchange:bibliographic-data", ns):
             pub_ref = biblio.find(".//exchange:publication-reference", ns)
             
@@ -109,7 +114,7 @@ def parse_xml(xml_data):
             for t in titles:
                 if t.text:
                     title = t.text
-                    if t.get('lang') == 'de': break # Deutsch bevorzugen
+                    if t.get('lang') == 'de': break
                 
             results.append({
                 "Land": country,
@@ -125,7 +130,7 @@ def parse_xml(xml_data):
 
 def send_mail(df, date_str):
     if not EMAIL_SENDER or not EMAIL_PASSWORD:
-        print("FEHLER: E-Mail Zugangsdaten in Secrets fehlen.")
+        print("FEHLER: E-Mail Zugangsdaten (SENDER oder PASSWORD) fehlen.")
         return
         
     msg = MIMEMultipart()
