@@ -1,0 +1,26 @@
+name: Weekly Patent Report
+on:
+  schedule:
+    - cron: '0 8 * * 4' # Jeden Donnerstag um 08:00 UTC
+  workflow_dispatch: # Erlaubt manuelles Starten zum Testen
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      - name: Install Dependencies
+        run: pip install -r requirements.txt
+      - name: Run Script
+        env:
+          EPO_CONSUMER_KEY: ${{ secrets.EPO_CONSUMER_KEY }}
+          EPO_CONSUMER_SECRET: ${{ secrets.EPO_CONSUMER_SECRET }}
+          EMAIL_SENDER: ${{ secrets.EMAIL_SENDER }}
+          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+          EMAIL_RECEIVER: ${{ secrets.EMAIL_RECEIVER }}
+        run: python patent_monitor.py
