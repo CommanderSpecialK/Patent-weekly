@@ -1,7 +1,7 @@
 name: Weekly Patent Report
 on:
-  schedule:
-    - cron: '17 1 * * 4'
+  #schedule:
+   # - cron: '17 1 * * 4'
   workflow_dispatch: # Erlaubt manuelles Starten zum Testen
 
 jobs:
